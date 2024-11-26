@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zadacha 2</title>
+  <style>
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .square {
+      width: 100px;
+      height: 100px;
+      background-color: white;
+      border: 2px solid black;
+      transition: all 0.3s ease;
+    }
+
+    .rounded {
+      border-radius: 20px;
+    }
+
+    #add-box {
+      display: block;
+      margin: 20px auto;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="square"></div>
+    <div class="square"></div>
+    <div class="square"></div>
+  </div>
+
+  <button id="add-box">Add a box</button>
+
+  <script>
+    // Get all the square elements
+    const squares = document.querySelectorAll('.square');
+
+    // Add event listeners to each square
+    squares.forEach(square => {
+      square.addEventListener('click', () => {
+        // Toggle the border radius
+        square.classList.toggle('rounded');
+      });
+
+      square.addEventListener('mouseenter', () => {
+        // Change the background color to green
+        square.style.backgroundColor = 'green';
+      });
+
+      square.addEventListener('mouseleave', () => {
+        // Change the background color back to white
+        square.style.backgroundColor = 'white';
+      });
+    });
+
+    // Add event listener to the "Add a box" button
+    const addBoxButton = document.querySelector('#add-box');
+    addBoxButton.addEventListener('click', () => {
+      // Create a new square element
+      const newSquare = document.createElement('div');
+      newSquare.classList.add('square');
+
+      // Add event listeners to the new square
+      newSquare.addEventListener('click', () => {
+        newSquare.classList.toggle('rounded');
+      });
+
+      newSquare.addEventListener('mouseenter', () => {
+        newSquare.style.backgroundColor = 'green';
+      });
+
+      newSquare.addEventListener('mouseleave', () => {
+        newSquare.style.backgroundColor = 'white';
+      });
+
+      // Append the new square to the container
+      const container = document.querySelector('.container');
+      container.appendChild(newSquare);
+    });
+  </script>
+</body>
+</html>
