@@ -1,0 +1,86 @@
+#include <stdio.h>      // За печатење (printf) и внесување (fgets)
+#include <stdlib.h>     // За функции како atoi и exit
+#include <fcntl.h>      // За отворање датотеки (open)
+#include <unistd.h>     // За системски повици (close, lseek, sleep)
+#include <sys/mman.h>   // За memory mapping (mmap, munmap)
+#include <string.h>     // За манипулација со стрингови (strlen, memset)
+#include <time.h>       // За случајни броеви (rand)
+
+#define MMAP_SIZE 1024  // Дефинираме големина од 1024 бајти за мапирање
+
+int main(int argc, char *argv[]) {
+    // Проверуваме дали корисникот внел 2 аргументи: тип на процес и име на датотека
+    if (argc != 3) {
+        printf("Користење: %s <тип_на_процес> <име_на_датотека>\n", argv[0]);
+        return 1; // Програмата завршува ако нема доволно аргументи
+    }
+
+    int type = atoi(argv[1]); // Првиот аргумент го претвораме во број (тип на процес)
+    char *filename = argv[2]; // Вториот аргумент е име на датотеката
+
+    // Отвораме или креираме датотека со даденото име
+    int fd = open(filename, O_RDWR | O_CREAT, 0644);
+    if (fd == -1) {
+        perror("open");
+        return 1;
+    }
+
+    // Осигуруваме дека датотеката има потребна големина
+    if (lseek(fd, MMAP_SIZE - 1, SEEK_SET) == -1) {
+        perror("lseek");
+        close(fd);
+        return 1;
+    }
+
+    if (write(fd, "\0", 1) == -1) {
+        perror("write");
+        close(fd);
+        return 1;
+    }
+
+    // Мапираме ја датотеката во меморијата
+    char *mapped_memory = mmap(NULL, MMAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (mapped_memory == MAP_FAILED) {
+        perror("mmap");
+        close(fd);
+        return 1;
+    }
+
+    close(fd); // Затвораме го дескрипторот откако е мапиран
+
+    if (type == 1) { // Прв тип на процес (внесување пораки)
+        while (1) {
+            printf("Внеси порака: ");
+            fgets(mapped_memory, MMAP_SIZE, stdin); // Читаме порака од корисникот
+            mapped_memory[strcspn(mapped_memory, "\n")] = '\0'; // Отстрануваме нов ред
+
+            printf("Пораката е запишана во меморијата.\n");
+            sleep(rand() % 10 + 1); // Чекаме случаен број секунди (1-10)
+        }
+    } else if (type == 2) { // Втор тип на процес (бришење пораки)
+        while (1) {
+            sleep(5); // Чекаме 5 секунди
+            memset(mapped_memory, 0, MMAP_SIZE); // Ја празниме меморијата
+            printf("Меморијата е испразнета од вториот процес.\n");
+        }
+    } else if (type == 3) { // Трет тип на процес (читање пораки)
+        while (1) {
+            if (strlen(mapped_memory) > 0) { // Проверуваме дали има порака
+                printf("Прочитано од меморијата: %s\n", mapped_memory);
+                sleep(rand() % 10 + 1); // Чекаме случаен број секунди (1-10)
+            } else {
+                sleep(1); // Проверуваме на секоја секунда
+            }
+        }
+    } else {
+        printf("Невалиден тип на процес. Дозволени се 1, 2 или 3.\n");
+    }
+
+    // Го одмавнуваме мапираниот сегмент
+    if (munmap(mapped_memory, MMAP_SIZE) == -1) {
+        perror("munmap");
+        return 1;
+    }
+
+    return 0; // Завршуваме програмата
+}
