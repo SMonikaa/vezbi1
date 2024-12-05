@@ -1,0 +1,67 @@
+#include <stdio.h>      // За печатење (printf) и внесување (fgets)
+#include <stdlib.h>     // За функции како atoi (претворање стринг во број)
+#include <unistd.h>     // За функции како sleep и close
+#include <fcntl.h>      // За функции како open
+#include <sys/mman.h>   // За работа со mmap (мемориско мапирање)
+#include <string.h>     // За манипулација со стрингови (strlen, memset)
+#include <time.h>       // За случајни броеви (rand)
+#include <sys/stat.h>   // За функцијата ftruncate
+
+#define FILE_SIZE 1024  // Дефинираме големина од 1024 бајти за датотеката
+
+int main(int argc, char *argv[]) {
+    // Проверуваме дали корисникот внел 2 аргументи: тип на процес и име на датотека
+    if (argc != 3) {
+        printf("Користење: %s <тип_на_процес> <датотека>\n", argv[0]);
+        return 1; // Програмата завршува ако нема доволно аргументи
+    }
+
+    int type = atoi(argv[1]); // Првиот аргумент го претвораме во број (тип на процес)
+    char *filename = argv[2]; // Вториот аргумент е името на датотеката
+
+    // Отвораме датотека за читање и пишување, или ја создаваме ако не постои
+    int fd = open(filename, O_RDWR | O_CREAT, 0644);
+    if (fd == -1) { // Ако има грешка, печатиме порака
+        perror("open");
+        return 1;
+    }
+
+    // Го подесуваме големината на датотеката на 1024 бајти
+    if (ftruncate(fd, FILE_SIZE) == -1) {
+        perror("ftruncate");
+        close(fd); // Ја затвораме датотеката ако има грешка
+        return 1;
+    }
+
+    // Ја мапираме датотеката во меморија
+    char *mapped_memory = mmap(NULL, FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (mapped_memory == MAP_FAILED) { // Ако има грешка, печатиме порака
+        perror("mmap");
+        close(fd); // Ја затвораме датотеката ако има грешка
+        return 1;
+    }
+
+    if (type == 1) { // Прв тип на процес (внесување пораки)
+        while (1) {
+            printf("Внеси порака: ");
+            fgets(mapped_memory, FILE_SIZE, stdin); // Читаме порака од корисникот
+            mapped_memory[strcspn(mapped_memory, "\n")] = '\0'; // Отстрануваме нов ред
+
+            printf("Пораката е зачувана.\n");
+            sleep(1); // Чекаме 1 секунда пред следниот внес
+        }
+    } else if (type == 2) { // Втор тип на процес (читање пораки)
+        while (1) {
+            printf("Прочитана порака: %s\n", mapped_memory);
+            sleep(2); // Чекаме 2 секунди пред повторно читање
+        }
+    } else {
+        printf("Непознат тип на процес. Користете 1 или 2.\n");
+    }
+
+    // Осигуруваме дека ресурсите се ослободуваат
+    munmap(mapped_memory, FILE_SIZE); // Ослободуваме меморија
+    close(fd); // Затвораме датотека
+
+    return 0;
+}
